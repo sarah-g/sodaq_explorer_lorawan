@@ -121,37 +121,29 @@ void setupLoRaOTAA(){
 
 void loop()
 {
-   float temp = getTemperature();
-   int humidity = getHumidity();
-   debugSerial.print("temp = ");
-   debugSerial.print(temp);
-   debugSerial.print(", humidity = ");
-   debugSerial.println(humidity);
+   int reading1 = getMilliVolts(TEMP_SENSOR);
+   int reading2 = getMilliVolts(TEMP_SENSOR);
+   debugSerial.print("reading1 = ");
+   debugSerial.print(reading1);
+   debugSerial.print(", reading2 = ");
+   debugSerial.println(reading2);
 
-   //define payload as byte array
-   //using 3 bytes for payload
-   uint8_t payload[3]; 
-   
-   //bytes 1 & 2
-   //temp value (needs 2 bytes to give suitable temp range with decimal places = -327.68 to +327.68)
-   //1 byte would only give a range of -127 to +128 with no decimal places
-   
-   //byte 3
-   //humidity value (only needs 1 byte as humidity range is 0% to 100%)
-   
-   //multiply temp by 100 to preserve 2 decimal places and then round to int
-   // e.g. 31.29 becomes => 3129
-   int int_temp = round(temp * 100);
+   //convert readings to byte array to send across LoRaWAN network
+   //define payload as byte array using 4 bytes for the payload - 2 bytes per reading
+   //2 bytes can hold unsigned values from 0-65535 (so can handle range 0-3300 or 0-5000)
+   //1 byte can only hold unsigned values from 0-255
+   uint8_t payload[4]; 
 
-   //add temp to payload byte array
-   payload[0] = (int_temp & 0xFF00) >> 8;  //mask lower byte and shift bits 8 to the right to write higher byte
-   payload[1] = (int_temp & 0x00FF);  //mask higher byte and write lower byte
+   //add first reading as 2 bytes to payload byte array
+   //e.g. 3124 = 00001100 00110100 as 2 byte binary
+   payload[0] = (reading1 & 0xFF00) >> 8;  //mask lower byte (00110100) and shift bits 8 to the right to write higher byte (00001100)
+   payload[1] = (reading1 & 0x00FF);  //mask higher byte and write lower byte (00110100)
 
-   //add humidity to payload byte array
-   //only 1 byte for humidity so no need to mask or shift higher/lower bytes
-   payload[2] = humidity;
+   //add second reading as 2 bytes to payload byte array
+   payload[2] = (reading2 & 0xFF00) >> 8;  //mask lower byte and shift bits 8 to the right to write higher byte
+   payload[3] = (reading2 & 0x00FF);  //mask higher byte and write lower byte
 
-   //print payload
+   //print payload - print each byte in payload as HEX value
    char hexBuffer[1];  //buffer to hold next hex value for printing
    for(int i=0; i<sizeof(payload); i++){
      sprintf(hexBuffer, "%02X", payload[i]);
@@ -202,21 +194,30 @@ void loop()
     delay(10000); 
 }
 
-float getTemperature()
+int getMilliVolts(int pin)
 {
-  //10mV per C, 0C is 500mV
-  float mVolts = (float)analogRead(TEMP_SENSOR) * 3300.0 / 1023.0;
-  float temp = (mVolts - 500.0) / 10.0;
-
-  //return String(temp);
-  return temp;
+  //Voltage at pin in milliVolts = (reading from ADC) * (3300/1024)
+  //This formula converts the number 0-1023 from the ADC into 0-3300mV (= 3.3V)
+  //for 5v boards change 3300 to 5000 to give 0-5000mV (= 5V)
+  float mVolts = (float)analogRead(pin) * 3300.0 / 1023.0;
+  return (int)round(mVolts);
 }
 
-int getHumidity()
-{
-  int hum = 56;  //hard coded until sensor added
-  return hum;
-}
+//float getTemperature()
+//{
+//  //10mV per C, 0C is 500mV
+//  float mVolts = (float)analogRead(TEMP_SENSOR) * 3300.0 / 1023.0;
+//  float temp = (mVolts - 500.0) / 10.0;
+//
+//  //return String(temp);
+//  return temp;
+//}
+
+//int getHumidity()
+//{
+//  int hum = 56;  //hard coded until sensor added
+//  return hum;
+//}
 
 /**
 * Gets and stores the LoRa module's HWEUI/

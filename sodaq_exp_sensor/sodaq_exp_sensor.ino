@@ -144,6 +144,7 @@ void loop()
    payload[3] = (reading2 & 0x00FF);  //mask higher byte and write lower byte
 
    //print payload - print each byte in payload as HEX value
+   debugSerial.print("payload = ");
    char hexBuffer[1];  //buffer to hold next hex value for printing
    for(int i=0; i<sizeof(payload); i++){
      sprintf(hexBuffer, "%02X", payload[i]);
@@ -202,22 +203,6 @@ int getMilliVolts(int pin)
   float mVolts = (float)analogRead(pin) * 3300.0 / 1023.0;
   return (int)round(mVolts);
 }
-
-//float getTemperature()
-//{
-//  //10mV per C, 0C is 500mV
-//  float mVolts = (float)analogRead(TEMP_SENSOR) * 3300.0 / 1023.0;
-//  float temp = (mVolts - 500.0) / 10.0;
-//
-//  //return String(temp);
-//  return temp;
-//}
-
-//int getHumidity()
-//{
-//  int hum = 56;  //hard coded until sensor added
-//  return hum;
-//}
 
 /**
 * Gets and stores the LoRa module's HWEUI/
